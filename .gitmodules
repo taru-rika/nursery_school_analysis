@@ -1,0 +1,3 @@
+[submodule "bert"]
+	path = bert
+	url = git@github.com:taru-rika/bert.git
