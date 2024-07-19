@@ -67,7 +67,8 @@ if page == "search":
 	    # 地図の中心位置の指定(今回は東京駅を指定)
 	    location=[35.72 , 139.75], 
 	    # タイル、アトリビュートの指定
-	    tiles='https://cyberjapandata.gsi.go.jp/xyz/airphoto/{z}/{x}/{y}.png',
+	    tiles='https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+	    #tiles='https://cyberjapandata.gsi.go.jp/xyz/airphoto/{z}/{x}/{y}.png',
 	    attr= '(令和5年度10月)',
 	    #attr= ty + '(令和5年度10月)',
 	    # ズームを指定
@@ -79,7 +80,7 @@ if page == "search":
 	
 	print("facility_list : ", facility_list)
 	#表示するデータを読み込み
-	df = pd.read_csv('./nursery_school/nursery_data.csv')
+	df = pd.read_csv('./nursery_school/nursery_data2.csv')
 	#df = pd.read_csv('./nursery_school/202310-2-1_' + ty +'.csv', encoding="shift-jis", nrows=10)
 	
 	# 読み込んだデータ(緯度・経度、ポップアップ用文字、アイコンを表示)

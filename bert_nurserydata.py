@@ -9,13 +9,19 @@ from io import BytesIO
 from wordcloud import WordCloud
 import colorsys
 
+rgb_array=[]
+
 # BERTのトークナイザーとモデルを読み込む
-tokenizer = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
-model_bert = BertModel.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+tokenizer = BertJapaneseTokenizer.from_pretrained('sonoisa/sentence-bert-base-ja-mean-tokens')
+model_bert = BertModel.from_pretrained('sonoisa/sentence-bert-base-ja-mean-tokens')
 model_bert.eval()
+#tokenizer = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+#model_bert = BertModel.from_pretrained('cl-tohoku/bert-base-japanese-whole-word-masking')
+#model_bert.eval()
+
 
 # 文の例として、テキストを定義
-df = pd.read_csv('./nursery_school/nursery_data.csv')
+df = pd.read_csv('./nursery_school/nursery_data2.csv')
 #print(df)
 text_list = np.array(df['事業所の理念'])
 print(text_list)
@@ -63,11 +69,25 @@ for text in text_list:
 	result_b = pca.explained_variance_ratio_[2]
 	rgb_list = [result_r, result_g, result_b]
 	print(rgb_list)
-	rgb_values = float_to_rgb(rgb_list)
-	color = '#%02x%02x%02x' % (int(rgb_values[0]), int(rgb_values[1]), int(rgb_values[2]))
-	#print(color)
-	feature_color.append(color)
+	rgb_array.append(rgb_list)
+	#rgb_values = float_to_rgb(rgb_list)
+	#color = '#%02x%02x%02x' % (int(rgb_values[0]), int(rgb_values[1]), int(rgb_values[2]))
 
+#各RGB成分の最大値と最小値を計算
+values_array = np.array(rgb_array)
+max_vals = np.max(values_array, axis=0)
+min_vals = np.min(values_array, axis=0)
+# 各成分を0〜1の範囲に拡張
+expanded_values = (values_array - min_vals) / (max_vals - min_vals)
+# 0〜255の範囲にスケーリング
+rgb_values = (expanded_values * 255).astype(int)
+print(rgb_values)
+for rgb in rgb_values:
+	color = '#%02x%02x%02x' % (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+	feature_color.append(color)
+print(feature_color)
+
+for text in text_list:
 	# wordcloudのエンコード情報を取得
 	#フォントの設定
 	#font_path="/usr/share/fonts/truetype/fonts-japanese-gothic.ttf"
@@ -89,4 +109,4 @@ for text in text_list:
 df['feature_color'] = feature_color
 df['img_base64'] = img_list
 print(df)
-df.to_csv("./nursery_school/nursery_data.csv", index=False)
+df.to_csv("./nursery_school/nursery_data2.csv", index=False)
