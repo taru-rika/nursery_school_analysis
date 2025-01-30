@@ -161,13 +161,14 @@ def create_cooccurrence_network(most_common_combinations, color_renso):
     print(color_renso)
     for node in cooc_net.nodes:
         print(node)
-        sentiment = color_renso[node]
-        if sentiment == "ポジティブ":
-            node_colors[node] = "blue"
-        elif sentiment == "ネガティブ":
-            node_colors[node] = "red"
-        else:
-            node_colors[node] = "gray"
+        if node in color_renso.keys():
+            sentiment = color_renso[node]
+            if sentiment == "ポジティブ":
+                node_colors[node] = "blue"
+            elif sentiment == "ネガティブ":
+                node_colors[node] = "red"
+            else:
+                node_colors[node] = "gray"
     
     # ノードの次数に基づいてサイズを設定
     node_sizes = {node: cooc_net.degree(node) * 50 for node in cooc_net.nodes} # 倍率を調整可能
@@ -350,38 +351,39 @@ for name, group in groups:
 
     output_file3 = output_dir3 + "_" + name + ".json"
     # 課金エリア！！！！！！気をつけろ！！！！！
-    with open(output_file3, 'w', encoding='utf-8') as file:
-        negapoji = {}
-        for key in meishi_bunsho.keys():
-            print(key)
-            print(list(meishi_bunsho[key]))
-            ###  ここにChatGPTを使用したネガポジ分析のコードを付け加えたい！！！！
-            res = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "日本語で返答してください。"   
-                    },
-                    {
-                        "role": "system",
-                        "content": "単語のみで返答してください。\n丁寧語はやめてください。\n 句読点もやめてください。"
-                    },
-                    {
-                        "role": "system",
-                        "content": f"{list(meishi_bunsho[key])}の要素1つずつ分析します。\n ポジティブであれば1点、ネガティブであれば-1点です。\n 配列の合計値がプラスであればポジティブ、マイナスであればネガティブです。"
-                    },
-                    {
-                        "role": "user",
-                        #"content": f"{meishi_bunsho[key]}に含まれる{key}はポジティブですか。ネガティブですか。"
-                        #"content": f"{meishi_bunsho[key]}はポジティブですか。ネガティブですか。"
-                        "content": "ポジティブですか。ネガティブですか。"
-                    }
-                ]
-            )
-            print(res["choices"][0]["message"]["content"])
-            negapoji[key] = res["choices"][0]["message"]["content"]
-        json.dump(negapoji, file, ensure_ascii=False, indent=4)  # 日本語をそのまま保存
+    if not os.path.isfile(output_file3):
+        with open(output_file3, 'w', encoding='utf-8') as file:
+            negapoji = {}
+            for key in meishi_bunsho.keys():
+                print(key)
+                print(list(meishi_bunsho[key]))
+                ###  ここにChatGPTを使用したネガポジ分析のコードを付け加えたい！！！！
+                res = openai.ChatCompletion.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "日本語で返答してください。"   
+                        },
+                        {
+                            "role": "system",
+                            "content": "単語のみで返答してください。\n丁寧語はやめてください。\n 句読点もやめてください。"
+                        },
+                        {
+                            "role": "system",
+                            "content": f"{list(meishi_bunsho[key])}の要素1つずつ分析します。\n ポジティブであれば1点、ネガティブであれば-1点です。\n 配列の合計値がプラスであればポジティブ、マイナスであればネガティブです。"
+                        },
+                        {
+                            "role": "user",
+                            #"content": f"{meishi_bunsho[key]}に含まれる{key}はポジティブですか。ネガティブですか。"
+                            #"content": f"{meishi_bunsho[key]}はポジティブですか。ネガティブですか。"
+                            "content": "ポジティブですか。ネガティブですか。"
+                        }
+                    ]
+                )
+                print(res["choices"][0]["message"]["content"])
+                negapoji[key] = res["choices"][0]["message"]["content"]
+            json.dump(negapoji, file, ensure_ascii=False, indent=4)  # 日本語をそのまま保存
     f = open(output_file3, 'r')
     negapoji = f.read()
     negapoji = json.loads(negapoji)
