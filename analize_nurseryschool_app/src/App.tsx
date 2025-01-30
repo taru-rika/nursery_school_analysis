@@ -37,8 +37,17 @@ const createIconWithRGB = (color: string) => {
 const App = () => {
   const [data, setData] = useState<FacilityData[]>([]);
   const position = new LatLng(35.717, 139.747)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedFacility, setSelectedFacility] = useState(null);
+
+  const handleMarkerClick = (facility) => {
+    setSelectedFacility(facility);
+    console.log(facility)
+  };
+
   //const position = new LatLng(35.675, 139.659)
 
+  const colors = ["#9e0142", "#ffffbf", "#f88d52", "#89d0a4", "#5e4fa2"]
   // 非同期関数でCSVを取得
   const fetchCSV = async () => {
     try {
@@ -79,41 +88,69 @@ const App = () => {
   }, []);
 
   return (
-    <React.Fragment>
-      <h1>Nursery school evaluation and analysis system for professionals</h1>
-      <details>
-        <summary>Overview</summary>
-        The aim is to provide a support system for education professionals and local authorities when analysing nursery schools and kindergartens.
-      </details>
-      
-      <label class="toggleContainer">
-        <span class="toggleLabel">Compare two nursery schools</span>
-        <label class="toggleButton">
-          <input type="checkbox" class="toggleButton__checkbox"/>
-        </label>
-      </label>
-
-      <MapContainer center={position} zoom={15} style={{ height: "800px", width: "1200px" }}>
-        <TileLayer
-          url="https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"
-          attribution="(5/2023)"
-        />
-       {data.map((facility, index) => (
-          <Marker
-            key={index}
-            position={[facility.lat, facility.lon]}
-            icon={createIconWithRGB(facility.feature_color)}
-          >
-            <Popup>
-              <div>
-                <h3>{facility.facilityName}</h3>
-                <img src={`data:image/png;base64,${facility.img_base64}`} alt={facility.facilityName} width="300px" height="250px"/>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </React.Fragment>
+    <div>
+    <h1>Nursery school evaluation and analysis system for Educational Professionals</h1>
+     <details>
+       <summary>Overview</summary>
+       The aim is to provide a support system for education professionals and local authorities when analysing nursery schools and kindergartens.
+     </details>
+     <h2>Please Click some Nursery Schools!</h2>
+     <div>
+       {colors.map(color => (
+         <button key={color} onClick={() => setSelectedColor(color)}>
+           Showing {color} pins
+         </button>
+       ))}
+       <button onClick={() => setSelectedColor(null)}>Showing All pins</button>
+     </div> 
+     
+     <div className='app-container'>
+       <div className="map-container">
+        <MapContainer center={position} zoom={15} style={{ height: "800px", width: "100%" }}>
+          <TileLayer
+            url="https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"
+            attribution="(5/2023)"
+          />
+         {data
+           .filter(pin => !selectedColor || pin.feature_color === selectedColor) 
+           .map((facility, index) => (
+            <Marker
+              key={index}
+              position={[facility.lat, facility.lon]}
+              icon={createIconWithRGB(facility.feature_color)}
+              eventHandlers={{
+                click: () => handleMarkerClick(facility),
+              }}
+            />
+           ))}
+        </MapContainer>
+       </div>
+       {selectedFacility && (
+         <div className="info-container">
+           <div>
+             <h2 style={{ display: 'inline-block', textAlign: 'left' }}>{selectedFacility.facilityName}</h2>
+             <button
+               onClick={() => setSelectedFacility(null)}  // ボタンをクリックで表示を閉じる
+               style={{
+                 display: 'inline-block',
+                 backgroundColor: 'transparent',
+                 border: 'none',
+                 fontSize: '20px',
+                 cursor: 'pointer'
+               }}
+             >
+               &times;
+             </button>
+             <iframe
+               className='network-html'
+               src={`cooccurrence_network_${selectedFacility.facilityName}.html`}
+               style={{ width: "100%", height: "800px" }}
+             ></iframe>
+           </div>
+         </div>
+       )}
+     </div>
+   </div>
   );
 };
 

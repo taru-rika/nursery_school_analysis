@@ -1,6 +1,12 @@
 import pandas as pd
 import MeCab
 import time
+from sklearn.manifold import MDS
+import numpy as np
+import json
+import networkx as nx
+from pyvis.network import Network
+import matplotlib.pyplot as plt
 
 # CSVファイルを読み込む
 def read_csv(file_path, column_name):
@@ -170,7 +176,8 @@ import pandas as pd
 
 def create_cooccurrence_network(most_common_combinations):
     # ネットワークの初期設定
-    cooc_net = Network(height="750px", width="100%", bgcolor="#FFFFFF", font_color="black")
+    cooc_net = nx.Graph()
+    #cooc_net = Network(height="750px", width="100%", bgcolor="#FFFFFF", font_color="black")
 
     # データフレームの作成
     data = pd.DataFrame(most_common_combinations, columns=['word_pair', 'count'])
@@ -178,18 +185,98 @@ def create_cooccurrence_network(most_common_combinations):
 
     # エッジデータの追加
     for index, row in data.iterrows():
-        cooc_net.add_node(row['word1'], label=row['word1'], title=row['word1'])
-        cooc_net.add_node(row['word2'], label=row['word2'], title=row['word2'])
-        cooc_net.add_edge(row['word1'], row['word2'], value=row['count'])
+        #cooc_net.add_node(row['word1'], label=row['word1'], title=row['word1'])
+        #cooc_net.add_node(row['word2'], label=row['word2'], title=row['word2'])
+        cooc_net.add_edge(row['word1'], row['word2'], weight=row['count'])
+    
+    # 単語のリストを作成
+    #words = list(set(data['word1'].tolist() + data['word2'].tolist()))
+
+    # 共起行列の作成
+    #word_index = {word: idx for idx, word in enumerate(words)}
+    #cooccurrence_matrix = np.zeros((len(words), len(words)))
+
+    #for _, row in data.iterrows():
+    #    i = word_index[row['word1']]
+    #    j = word_index[row['word2']]
+    #    cooccurrence_matrix[i, j] = row['count']
+    #    cooccurrence_matrix[j, i] = row['count']
+
+    # ノードの次数に基づいてサイズを設定
+    node_sizes = {node: cooc_net.degree(node) * 50 for node in cooc_net.nodes} # 倍率を調整可能
+    #degrees = dict(cooc_net.degree())  # ノードの次数（接続エッジ数）
+    #max_degree = max(degrees.values()) if degrees else 1  # 最大次数を取得
+    #node_sizes = {node: (degree / max_degree) * 50 + 10 for node, degree in degrees.items()}  # サイズのスケーリング
+    print(node_sizes)
+
+    
+    # MDSによるノード位置の固定
+    words = list(cooc_net.nodes)
+    word_index = {word: idx for idx, word in enumerate(words)}
+    cooccurrence_matrix = np.zeros((len(words), len(words)))
+    cooccurrence_matrix = nx.to_numpy_array(cooc_net, nodelist=words, weight='weight')
+    mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42, normalized_stress=False)
+    pos = mds.fit_transform(1 / (cooccurrence_matrix + 1e-5))  # 類似度を距離に変換
+
+    # ノードが重ならないように力学シミュレーションで調整
+    positions = {words[i]: pos[i] for i in range(len(words))}
+    for _ in range(100):  # 繰り返し計算で位置調整
+        for node1, pos1 in positions.items():
+            for node2, pos2 in positions.items():
+                if node1 != node2:
+                    dist = np.linalg.norm(pos1 - pos2)
+                    if dist < 0.1:  # 閾値以下の場合は調整
+                        direction = (pos1 - pos2) / dist
+                        positions[node1] += direction * 0.01
+                        positions[node2] -= direction * 0.01
+    
+    # エッジデータの追加
+    for word in words:
+        print(node_sizes[word])
+        x, y = positions[word]
+        #idx = word_index[word]
+        cooc_net.add_node(word, label=word, title=word, x=x * 1000, y=y * 1000, size=node_sizes[word])
+
+    for _, row in data.iterrows():
+        cooc_net.add_edge(row['word1'], row['word2'], value=row['count'], width=row['count'] * 10)
+
+    # ノード位置を辞書形式で保存
+    node_positions = {node: pos[i].tolist() for i, node in enumerate(cooc_net.nodes())}
+    # ノード位置をJSONファイルに保存
+    with open('mds_node_positions.json', 'w') as f:
+        json.dump(node_positions, f, ensure_ascii=False)
+    print("ノード位置をmds_node_positions.jsonに保存しました!!!!!")
+
+    # ネットワークの初期設定
+    cooc_net_pyvis = Network(height="750px", width="100%", bgcolor="#FFFFFF", font_color="black")
+    cooc_net_pyvis.from_nx(cooc_net)
+
+    # ノードとエッジをPyvisネットワークに追加
+    for node in cooc_net.nodes:
+        x, y = positions[node]
+        cooc_net_pyvis.add_node(
+            node,
+            label=node,
+            x=x * 1000,  # スケーリング調整
+            y=y * 1000,
+            value=node_sizes[node],
+        )
+
+    for edge in cooc_net.edges(data=True):
+        cooc_net_pyvis.add_edge(edge[0], edge[1], value=edge[2].get('weight', 1))
 
     # ネットワークの可視化設定
-    cooc_net.set_options("""
+    cooc_net_pyvis.set_options("""
     var options = {
       "nodes": {
-        "font": {
-          "size": 12
+        "scaling": {
+          "min": 10,
+          "max": 5000
         }
       },
+      "font": {
+          "size": 12
+        },
       "edges": {
         "color": {
           "inherit": true
@@ -197,25 +284,12 @@ def create_cooccurrence_network(most_common_combinations):
         "smooth": false
       },
       "physics": {
-        "forceAtlas2Based": {
-          "gravitationalConstant": -26,
-          "centralGravity": 0.005,
-          "springLength": 230,
-          "springConstant": 0.18
-        },
-        "maxVelocity": 146,
-        "solver": "forceAtlas2Based",
-        "timestep": 0.35,
-        "stabilization": {
-          "enabled": true,
-          "iterations": 2000,
-          "updateInterval": 25
-        }
+        "enabled": false 
       }
     }
     """)
-
-    return cooc_net
+ 
+    return cooc_net_pyvis
 
 # この関数を使用するには、most_common_combinationsを引数として渡します
 input_file_path = 'meishi_example.txt'  # 入力ファイルのパスを設定してください

@@ -47,6 +47,8 @@ summary {
   padding: 0.5em;
 }
 
+
+
 details[open] {
   padding: 0.5em;
 }
@@ -103,4 +105,24 @@ details[open] summary {
 
 .toggleButton__checkbox:checked {
   left: calc(100% - 26px);
+}
+
+.app-container {
+  display: flex;
+  flex-direction: row; /* アイテムを縦に並べる */
+  height: 100vh; /* ビューポートの高さに合わせて全画面表示 */
+}
+
+.map-container {
+  flex: 1; /* 利用可能なスペースを等分に使用 */
+  overflow: hidden; /* 内容がはみ出た場合にスクロールバーを表示しない */
+}
+
+.info-container {
+  flex: 1; /* 利用可能なスペースを等分に使用 */
+  overflow: hidden; /* 内容が多い場合にスクロールバーを表示 */
+}
+
+.network-html {
+  overflow: hidden;
 }
